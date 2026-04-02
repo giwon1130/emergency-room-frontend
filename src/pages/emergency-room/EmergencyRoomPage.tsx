@@ -26,6 +26,9 @@ export function EmergencyRoomPage() {
   const [radius, setRadius] = useState<number>(5000);
   const [currentLocation, setCurrentLocation] = useState(DEFAULT_LOCATION);
   const [locationLabel, setLocationLabel] = useState("서울 시청 기준");
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "GREEN" | "RED" | "UNKNOWN">("ALL");
+  const [sortOption, setSortOption] = useState<"distance" | "beds" | "name">("distance");
 
   const loadEmergencyData = async (nextLocation = currentLocation, nextRadius = radius) => {
     setIsLoading(true);
@@ -93,6 +96,32 @@ export function EmergencyRoomPage() {
     void loadEmergencyData(currentLocation, radius);
   }, [radius]);
 
+  const filteredHospitals = hospitals
+    .filter((hospital) => {
+      const matchesKeyword =
+        searchKeyword.trim().length === 0 ||
+        hospital.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        (hospital.address ?? "").toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        (hospital.region ?? "").toLowerCase().includes(searchKeyword.toLowerCase());
+
+      const matchesStatus = statusFilter === "ALL" || hospital.emergencyStatus === statusFilter;
+      return matchesKeyword && matchesStatus;
+    })
+    .sort((left, right) => {
+      if (sortOption === "beds") {
+        return (right.availableBeds ?? -1) - (left.availableBeds ?? -1);
+      }
+
+      if (sortOption === "name") {
+        return left.name.localeCompare(right.name, "ko");
+      }
+
+      return 0;
+    });
+
+  const visibleSelectedHospital =
+    filteredHospitals.find((hospital) => hospital.hospitalId === selectedHospital?.hospitalId) ?? filteredHospitals[0] ?? null;
+
   return (
     <main className="page-shell">
       <header className="page-header">
@@ -114,6 +143,31 @@ export function EmergencyRoomPage() {
           </p>
         </div>
         <div className="control-actions">
+          <label className="search-control">
+            <span className="control-label">검색</span>
+            <input
+              value={searchKeyword}
+              onChange={(event) => setSearchKeyword(event.target.value)}
+              placeholder="병원명, 주소, 지역"
+            />
+          </label>
+          <label className="radius-control">
+            <span className="control-label">상태</span>
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "ALL" | "GREEN" | "RED" | "UNKNOWN")}>
+              <option value="ALL">전체</option>
+              <option value="GREEN">가용</option>
+              <option value="RED">혼잡</option>
+              <option value="UNKNOWN">미확인</option>
+            </select>
+          </label>
+          <label className="radius-control">
+            <span className="control-label">정렬</span>
+            <select value={sortOption} onChange={(event) => setSortOption(event.target.value as "distance" | "beds" | "name")}>
+              <option value="distance">기본</option>
+              <option value="beds">가용 병상 순</option>
+              <option value="name">이름 순</option>
+            </select>
+          </label>
           <label className="radius-control">
             <span className="control-label">반경</span>
             <select value={radius} onChange={(event) => setRadius(Number(event.target.value))}>
@@ -146,54 +200,62 @@ export function EmergencyRoomPage() {
 
       {summary ? <EmergencyRoomSummaryCard summary={summary} /> : null}
 
+      <section className="result-meta">
+        <div>
+          <span className="control-label">검색 결과</span>
+          <strong>{filteredHospitals.length}개 병원</strong>
+          <p className="control-copy">현재 검색/필터 기준으로 표시되는 병원 수</p>
+        </div>
+      </section>
+
       <section className="emergency-layout">
         <EmergencyRoomMapPanel
-          hospitals={hospitals}
+          hospitals={filteredHospitals}
           center={currentLocation}
-          selectedHospitalId={selectedHospital?.hospitalId ?? null}
+          selectedHospitalId={visibleSelectedHospital?.hospitalId ?? null}
           onSelectHospital={setSelectedHospital}
         />
         <div className="side-panel-stack">
-          {selectedHospital ? (
+          {visibleSelectedHospital ? (
             <section className="hospital-detail-panel">
               <div className="hospital-detail-header">
                 <div>
                   <span className="control-label">선택한 병원</span>
-                  <h2>{selectedHospital.name}</h2>
+                  <h2>{visibleSelectedHospital.name}</h2>
                 </div>
-                <span className={`status-badge ${selectedHospital.emergencyStatus.toLowerCase()}`}>
-                  {selectedHospital.emergencyStatus}
+                <span className={`status-badge ${visibleSelectedHospital.emergencyStatus.toLowerCase()}`}>
+                  {visibleSelectedHospital.emergencyStatus}
                 </span>
               </div>
               <div className="hospital-detail-grid">
                 <div>
                   <span className="detail-label">주소</span>
-                  <p>{selectedHospital.address ?? "주소 정보 없음"}</p>
+                  <p>{visibleSelectedHospital.address ?? "주소 정보 없음"}</p>
                 </div>
                 <div>
                   <span className="detail-label">지역</span>
-                  <p>{selectedHospital.region ?? "지역 정보 없음"}</p>
+                  <p>{visibleSelectedHospital.region ?? "지역 정보 없음"}</p>
                 </div>
                 <div>
                   <span className="detail-label">가용 병상</span>
-                  <p>{selectedHospital.availableBeds ?? "-"}</p>
+                  <p>{visibleSelectedHospital.availableBeds ?? "-"}</p>
                 </div>
                 <div>
                   <span className="detail-label">최근 갱신</span>
-                  <p>{selectedHospital.lastUpdated ? new Date(selectedHospital.lastUpdated).toLocaleString("ko-KR") : "업데이트 정보 없음"}</p>
+                  <p>{visibleSelectedHospital.lastUpdated ? new Date(visibleSelectedHospital.lastUpdated).toLocaleString("ko-KR") : "업데이트 정보 없음"}</p>
                 </div>
                 <div>
                   <span className="detail-label">좌표</span>
                   <p>
-                    {selectedHospital.latitude ?? "-"}, {selectedHospital.longitude ?? "-"}
+                    {visibleSelectedHospital.latitude ?? "-"}, {visibleSelectedHospital.longitude ?? "-"}
                   </p>
                 </div>
               </div>
             </section>
           ) : null}
           <EmergencyHospitalList
-            hospitals={hospitals}
-            selectedHospitalId={selectedHospital?.hospitalId ?? null}
+            hospitals={filteredHospitals}
+            selectedHospitalId={visibleSelectedHospital?.hospitalId ?? null}
             onSelectHospital={setSelectedHospital}
           />
         </div>
