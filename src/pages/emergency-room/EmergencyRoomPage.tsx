@@ -133,6 +133,16 @@ export function EmergencyRoomPage() {
   const visibleSelectedHospital =
     filteredHospitals.find((hospital) => hospital.hospitalId === selectedHospital?.hospitalId) ?? filteredHospitals[0] ?? null;
 
+  const detailLatitude = selectedHospitalDetail?.latitude ?? visibleSelectedHospital?.latitude ?? null;
+  const detailLongitude = selectedHospitalDetail?.longitude ?? visibleSelectedHospital?.longitude ?? null;
+  const mapLink =
+    detailLatitude != null && detailLongitude != null
+      ? `https://map.naver.com/p/directions/-/${detailLongitude},${detailLatitude},${encodeURIComponent(
+          visibleSelectedHospital?.name ?? "응급실"
+        )},PLACE_POI/-/transit?c=15.00,0,0,0,dh`
+      : null;
+  const phoneLink = selectedHospitalDetail?.emergencyPhone ?? selectedHospitalDetail?.phone ?? null;
+
   useEffect(() => {
     if (!visibleSelectedHospital) {
       setSelectedHospitalDetail(null);
@@ -269,6 +279,31 @@ export function EmergencyRoomPage() {
                 <span className={`status-badge ${(selectedHospitalDetail?.emergencyStatus ?? visibleSelectedHospital.emergencyStatus).toLowerCase()}`}>
                   {selectedHospitalDetail?.emergencyStatusLabel ?? visibleSelectedHospital.emergencyStatus}
                 </span>
+              </div>
+              <div className="detail-action-row">
+                {phoneLink ? (
+                  <a className="detail-action-button primary" href={`tel:${phoneLink.replace(/[^0-9]/g, "")}`}>
+                    응급실 전화
+                  </a>
+                ) : (
+                  <button type="button" className="detail-action-button disabled" disabled>
+                    전화 정보 없음
+                  </button>
+                )}
+                {mapLink ? (
+                  <a
+                    className="detail-action-button"
+                    href={mapLink}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    외부 지도 열기
+                  </a>
+                ) : (
+                  <button type="button" className="detail-action-button disabled" disabled>
+                    좌표 정보 없음
+                  </button>
+                )}
               </div>
               {isDetailLoading ? (
                 <p className="detail-meta-copy">병원 상세 정보를 불러오는 중이다.</p>

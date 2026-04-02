@@ -362,6 +362,39 @@ a {
   line-height: 1.5;
 }
 
+.detail-action-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.detail-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: white;
+  color: #0f172a;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.detail-action-button.primary {
+  background: #111827;
+  border-color: #111827;
+  color: white;
+}
+
+.detail-action-button.disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
 .detail-flag-row {
   display: flex;
   gap: 10px;
