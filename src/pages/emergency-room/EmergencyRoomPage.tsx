@@ -25,6 +25,43 @@ const RADIUS_OPTIONS = [
   { label: "20km", value: 20000 }
 ] as const;
 
+function calculateDistanceInMeters(
+  originLat: number,
+  originLng: number,
+  targetLat: number | null,
+  targetLng: number | null
+): number | null {
+  if (targetLat == null || targetLng == null) {
+    return null;
+  }
+
+  const toRadians = (degree: number) => (degree * Math.PI) / 180;
+  const earthRadius = 6371000;
+  const latDiff = toRadians(targetLat - originLat);
+  const lngDiff = toRadians(targetLng - originLng);
+  const a =
+    Math.sin(latDiff / 2) * Math.sin(latDiff / 2) +
+    Math.cos(toRadians(originLat)) *
+      Math.cos(toRadians(targetLat)) *
+      Math.sin(lngDiff / 2) *
+      Math.sin(lngDiff / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return Math.round(earthRadius * c);
+}
+
+function formatDistance(distanceInMeters: number | null): string {
+  if (distanceInMeters == null) {
+    return "거리 정보 없음";
+  }
+
+  if (distanceInMeters < 1000) {
+    return `${distanceInMeters}m`;
+  }
+
+  return `${(distanceInMeters / 1000).toFixed(1)}km`;
+}
+
 export function EmergencyRoomPage() {
   const [summary, setSummary] = useState<EmergencyStatusSummary | null>(null);
   const [hospitals, setHospitals] = useState<NearbyEmergencyHospital[]>([]);
@@ -108,6 +145,15 @@ export function EmergencyRoomPage() {
   }, [radius]);
 
   const filteredHospitals = hospitals
+    .map((hospital) => ({
+      ...hospital,
+      distanceInMeters: calculateDistanceInMeters(
+        currentLocation.latitude,
+        currentLocation.longitude,
+        hospital.latitude,
+        hospital.longitude
+      )
+    }))
     .filter((hospital) => {
       const matchesKeyword =
         searchKeyword.trim().length === 0 ||
@@ -119,6 +165,18 @@ export function EmergencyRoomPage() {
       return matchesKeyword && matchesStatus;
     })
     .sort((left, right) => {
+      if (sortOption === "distance") {
+        if (left.distanceInMeters == null) {
+          return 1;
+        }
+
+        if (right.distanceInMeters == null) {
+          return -1;
+        }
+
+        return left.distanceInMeters - right.distanceInMeters;
+      }
+
       if (sortOption === "beds") {
         return (right.availableBeds ?? -1) - (left.availableBeds ?? -1);
       }
@@ -275,6 +333,9 @@ export function EmergencyRoomPage() {
                 <div>
                   <span className="control-label">선택한 병원</span>
                   <h2>{visibleSelectedHospital.name}</h2>
+                  <p className="detail-meta-copy detail-distance-copy">
+                    현재 위치 기준 {formatDistance(visibleSelectedHospital.distanceInMeters)}
+                  </p>
                 </div>
                 <span className={`status-badge ${(selectedHospitalDetail?.emergencyStatus ?? visibleSelectedHospital.emergencyStatus).toLowerCase()}`}>
                   {selectedHospitalDetail?.emergencyStatusLabel ?? visibleSelectedHospital.emergencyStatus}
@@ -331,6 +392,10 @@ export function EmergencyRoomPage() {
                 <div>
                   <span className="detail-label">가용 병상</span>
                   <p>{selectedHospitalDetail?.availableBeds ?? visibleSelectedHospital.availableBeds ?? "-"}</p>
+                </div>
+                <div>
+                  <span className="detail-label">거리</span>
+                  <p>{formatDistance(visibleSelectedHospital.distanceInMeters)}</p>
                 </div>
                 <div>
                   <span className="detail-label">최근 갱신</span>

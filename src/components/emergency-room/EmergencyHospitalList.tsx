@@ -1,9 +1,25 @@
 import type { NearbyEmergencyHospital } from "../../types/emergency-room";
 
+interface ListedEmergencyHospital extends NearbyEmergencyHospital {
+  distanceInMeters?: number | null;
+}
+
 interface Props {
-  hospitals: NearbyEmergencyHospital[];
+  hospitals: ListedEmergencyHospital[];
   selectedHospitalId: string | null;
   onSelectHospital: (hospital: NearbyEmergencyHospital) => void;
+}
+
+function formatDistance(distanceInMeters?: number | null): string {
+  if (distanceInMeters == null) {
+    return "거리 정보 없음";
+  }
+
+  if (distanceInMeters < 1000) {
+    return `${distanceInMeters}m`;
+  }
+
+  return `${(distanceInMeters / 1000).toFixed(1)}km`;
 }
 
 export function EmergencyHospitalList({ hospitals, selectedHospitalId, onSelectHospital }: Props) {
@@ -36,6 +52,9 @@ export function EmergencyHospitalList({ hospitals, selectedHospitalId, onSelectH
             <p>{hospital.address ?? "주소 정보 없음"}</p>
             <div className="hospital-card-footer">
               <span>가용 병상 {hospital.availableBeds ?? "-"}</span>
+              <span>{formatDistance(hospital.distanceInMeters)}</span>
+            </div>
+            <div className="hospital-card-footer compact">
               <span>{hospital.region ?? hospital.hospitalId}</span>
             </div>
           </article>

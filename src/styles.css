@@ -292,6 +292,10 @@ a {
   font-size: 14px;
 }
 
+.hospital-card-footer.compact {
+  margin-top: 6px;
+}
+
 .status-badge {
   padding: 6px 10px;
   border-radius: 999px;
@@ -421,6 +425,10 @@ a {
   color: #64748b;
   font-size: 14px;
   line-height: 1.6;
+}
+
+.detail-distance-copy {
+  margin-top: 6px;
 }
 
 @media (max-width: 960px) {
