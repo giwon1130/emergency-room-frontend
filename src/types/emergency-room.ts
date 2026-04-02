@@ -18,6 +18,24 @@ export interface NearbyEmergencyHospital {
   longitude: number | null;
 }
 
+export interface EmergencyHospitalDetail {
+  hospitalId: string;
+  name: string;
+  address: string | null;
+  region: string | null;
+  phone: string | null;
+  emergencyPhone: string | null;
+  availableBeds: number;
+  emergencyStatus: HospitalStatus;
+  emergencyStatusLabel: string;
+  lastUpdated: string | null;
+  updatedRecently: boolean;
+  hasLocation: boolean;
+  contactAvailable: boolean;
+  latitude: number | null;
+  longitude: number | null;
+}
+
 export interface EmergencyStatusSummary {
   totalHospitals: number;
   greenCount: number;

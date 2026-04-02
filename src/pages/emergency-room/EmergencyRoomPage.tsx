@@ -2,8 +2,16 @@ import { useEffect, useState } from "react";
 import { EmergencyHospitalList } from "../../components/emergency-room/EmergencyHospitalList";
 import { EmergencyRoomSummaryCard } from "../../components/emergency-room/EmergencyRoomSummaryCard";
 import { EmergencyRoomMapPanel } from "../../components/emergency-room/EmergencyRoomMapPanel";
-import { fetchEmergencyRoomSummary, fetchNearbyEmergencyHospitals } from "../../services/emergencyRoomApi";
-import type { EmergencyStatusSummary, NearbyEmergencyHospital } from "../../types/emergency-room";
+import {
+  fetchEmergencyHospitalDetail,
+  fetchEmergencyRoomSummary,
+  fetchNearbyEmergencyHospitals
+} from "../../services/emergencyRoomApi";
+import type {
+  EmergencyHospitalDetail,
+  EmergencyStatusSummary,
+  NearbyEmergencyHospital
+} from "../../types/emergency-room";
 
 const DEFAULT_LOCATION = {
   latitude: 37.5665,
@@ -21,6 +29,8 @@ export function EmergencyRoomPage() {
   const [summary, setSummary] = useState<EmergencyStatusSummary | null>(null);
   const [hospitals, setHospitals] = useState<NearbyEmergencyHospital[]>([]);
   const [selectedHospital, setSelectedHospital] = useState<NearbyEmergencyHospital | null>(null);
+  const [selectedHospitalDetail, setSelectedHospitalDetail] = useState<EmergencyHospitalDetail | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [radius, setRadius] = useState<number>(5000);
@@ -46,6 +56,7 @@ export function EmergencyRoomPage() {
 
       setSummary(nextSummary);
       setHospitals(nextHospitals);
+      setSelectedHospitalDetail(null);
       setSelectedHospital((currentSelectedHospital) =>
         nextHospitals.find((hospital) => hospital.hospitalId === currentSelectedHospital?.hospitalId)
           ?? nextHospitals[0]
@@ -121,6 +132,38 @@ export function EmergencyRoomPage() {
 
   const visibleSelectedHospital =
     filteredHospitals.find((hospital) => hospital.hospitalId === selectedHospital?.hospitalId) ?? filteredHospitals[0] ?? null;
+
+  useEffect(() => {
+    if (!visibleSelectedHospital) {
+      setSelectedHospitalDetail(null);
+      return;
+    }
+
+    let cancelled = false;
+    setIsDetailLoading(true);
+
+    void fetchEmergencyHospitalDetail(visibleSelectedHospital.hospitalId)
+      .then((detail) => {
+        if (!cancelled) {
+          setSelectedHospitalDetail(detail);
+        }
+      })
+      .catch((error) => {
+        console.warn("hospital detail API failed", error);
+        if (!cancelled) {
+          setSelectedHospitalDetail(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsDetailLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visibleSelectedHospital?.hospitalId]);
 
   return (
     <main className="page-shell">
@@ -223,34 +266,64 @@ export function EmergencyRoomPage() {
                   <span className="control-label">선택한 병원</span>
                   <h2>{visibleSelectedHospital.name}</h2>
                 </div>
-                <span className={`status-badge ${visibleSelectedHospital.emergencyStatus.toLowerCase()}`}>
-                  {visibleSelectedHospital.emergencyStatus}
+                <span className={`status-badge ${(selectedHospitalDetail?.emergencyStatus ?? visibleSelectedHospital.emergencyStatus).toLowerCase()}`}>
+                  {selectedHospitalDetail?.emergencyStatusLabel ?? visibleSelectedHospital.emergencyStatus}
+                </span>
+              </div>
+              {isDetailLoading ? (
+                <p className="detail-meta-copy">병원 상세 정보를 불러오는 중이다.</p>
+              ) : null}
+              <div className="detail-flag-row">
+                <span className={`detail-flag ${selectedHospitalDetail?.updatedRecently ? "active" : ""}`}>
+                  {selectedHospitalDetail?.updatedRecently ? "최근 갱신" : "갱신 정보 부족"}
+                </span>
+                <span className={`detail-flag ${selectedHospitalDetail?.contactAvailable ? "active" : ""}`}>
+                  {selectedHospitalDetail?.contactAvailable ? "연락처 제공" : "연락처 부족"}
+                </span>
+                <span className={`detail-flag ${selectedHospitalDetail?.hasLocation ? "active" : ""}`}>
+                  {selectedHospitalDetail?.hasLocation ? "좌표 제공" : "좌표 부족"}
                 </span>
               </div>
               <div className="hospital-detail-grid">
                 <div>
                   <span className="detail-label">주소</span>
-                  <p>{visibleSelectedHospital.address ?? "주소 정보 없음"}</p>
+                  <p>{selectedHospitalDetail?.address ?? visibleSelectedHospital.address ?? "주소 정보 없음"}</p>
                 </div>
                 <div>
                   <span className="detail-label">지역</span>
-                  <p>{visibleSelectedHospital.region ?? "지역 정보 없음"}</p>
+                  <p>{selectedHospitalDetail?.region ?? visibleSelectedHospital.region ?? "지역 정보 없음"}</p>
                 </div>
                 <div>
                   <span className="detail-label">가용 병상</span>
-                  <p>{visibleSelectedHospital.availableBeds ?? "-"}</p>
+                  <p>{selectedHospitalDetail?.availableBeds ?? visibleSelectedHospital.availableBeds ?? "-"}</p>
                 </div>
                 <div>
                   <span className="detail-label">최근 갱신</span>
-                  <p>{visibleSelectedHospital.lastUpdated ? new Date(visibleSelectedHospital.lastUpdated).toLocaleString("ko-KR") : "업데이트 정보 없음"}</p>
+                  <p>
+                    {selectedHospitalDetail?.lastUpdated ?? visibleSelectedHospital.lastUpdated
+                      ? new Date(selectedHospitalDetail?.lastUpdated ?? visibleSelectedHospital.lastUpdated ?? "").toLocaleString("ko-KR")
+                      : "업데이트 정보 없음"}
+                  </p>
+                </div>
+                <div>
+                  <span className="detail-label">대표 연락처</span>
+                  <p>{selectedHospitalDetail?.phone ?? "연락처 정보 없음"}</p>
+                </div>
+                <div>
+                  <span className="detail-label">응급실 연락처</span>
+                  <p>{selectedHospitalDetail?.emergencyPhone ?? "응급실 연락처 정보 없음"}</p>
                 </div>
                 <div>
                   <span className="detail-label">좌표</span>
                   <p>
-                    {visibleSelectedHospital.latitude ?? "-"}, {visibleSelectedHospital.longitude ?? "-"}
+                    {selectedHospitalDetail?.latitude ?? visibleSelectedHospital.latitude ?? "-"},{" "}
+                    {selectedHospitalDetail?.longitude ?? visibleSelectedHospital.longitude ?? "-"}
                   </p>
                 </div>
               </div>
+              <p className="detail-meta-copy">
+                선택 병원 상세는 단건 조회 API 기준으로 갱신된다. 탐색 목록은 주변 병원 조회 결과를 유지한다.
+              </p>
             </section>
           ) : null}
           <EmergencyHospitalList

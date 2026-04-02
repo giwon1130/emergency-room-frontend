@@ -1,5 +1,6 @@
 import type {
   ApiResponse,
+  EmergencyHospitalDetail,
   EmergencyStatusSummary,
   NearbyEmergencyHospital
 } from "../types/emergency-room";
@@ -53,4 +54,10 @@ export async function fetchNearbyEmergencyHospitals(
     console.warn("nearby hospitals API fallback to mock", error);
     return mockHospitals;
   }
+}
+
+export async function fetchEmergencyHospitalDetail(
+  hospitalId: string
+): Promise<EmergencyHospitalDetail> {
+  return request<EmergencyHospitalDetail>(`/api/v1/emergency/hospitals/${hospitalId}`);
 }

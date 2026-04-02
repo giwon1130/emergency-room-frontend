@@ -362,6 +362,34 @@ a {
   line-height: 1.5;
 }
 
+.detail-flag-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.detail-flag {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.detail-flag.active {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.detail-meta-copy {
+  margin: 12px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 @media (max-width: 960px) {
   .control-panel,
   .control-actions,
