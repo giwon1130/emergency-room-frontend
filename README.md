@@ -48,10 +48,20 @@
 
 ## 환경 변수
 - `VITE_API_BASE_URL`: 백엔드 API base URL
-- 기본 예시: [`.env.example`](/Users/g/workspace/github-public/emergency-room-frontend/.env.example)
+- 기본 예시: [`.env.example`](/Users/g/workspace/public/civic/emergency-room-frontend/.env.example)
 
 ## 로컬 실행
 1. `npm install`
 2. `cp .env.example .env`
 3. `npm run dev`
 4. 기본 백엔드 예시: `http://localhost:8082`
+
+## Docker
+```bash
+docker build -t emergency-room-frontend .
+docker run -p 4178:80 emergency-room-frontend
+```
+
+- 기본 정적 웹 포트: `http://localhost:4178`
+- 프론트만 따로 띄우면 `VITE_API_BASE_URL`을 실제 API 주소로 맞춘 뒤 빌드해야 한다.
+- 로컬 개발 기본 API 예시는 계속 `http://localhost:8082`다.
